@@ -32,6 +32,16 @@ MAIL_MCP_TOKEN=$(openssl rand -hex 32) MAIL_MCP_PORT=8090 vendor/bin/mail-mcp
 
 `POST /mcp` принимает JSON-RPC (`initialize`, `tools/list`, `tools/call`, `ping`) и отвечает JSON; `GET /health`.
 
+## Docker
+
+```sh
+docker build -t mercurius-mail-mcp .
+docker run --rm -e MAIL_MCP_TOKEN=$(openssl rand -hex 32) -p 8090:8090 mercurius-mail-mcp
+```
+
+В Меркурии сервер — в профиле compose `mail` (сабмодуль `mcp/mail`): добавьте его в `COMPOSE_PROFILES` и задайте
+`MAIL_MCP_TOKEN` в `.env`.
+
 ## Проверки
 
 `composer check` — PHPUnit, PHPStan (max) и Psalm (уровень 1).
