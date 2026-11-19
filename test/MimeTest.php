@@ -24,6 +24,20 @@ final class MimeTest extends TestCase {
         self::assertSame('Счёт за ноябрь', $message->header('subject'));
         self::assertSame('Привет, счёт во вложении.', $message->text);
         self::assertSame([['name' => 'invoice.pdf', 'type' => 'application/pdf', 'size' => 2048]], $message->attachments);
+        self::assertSame([['name' => 'invoice.pdf', 'type' => 'application/pdf', 'bytes' => str_repeat('x', 2048)]], Parser::attachments($raw), 'the files themselves, in their order');
+    }
+
+    public function testFilesGoAsAMultipartLetterThatReadsBack(): void {
+        [$message] = Builder::build('admin@rekryt.ru', ['ivan@example.ru'], [], 'Отчёт', "Во вложении.", files: [
+            ['name' => 'отчёт.pdf', 'type' => 'application/pdf', 'bytes' => "%PDF-1.4\0binary"],
+            ['name' => 'data.csv', 'type' => 'text/csv', 'bytes' => "a;b\n1;2\n"],
+        ]);
+
+        $parsed = Parser::parse($message);
+        self::assertSame('Во вложении.', $parsed->text);
+        self::assertSame(['отчёт.pdf', 'data.csv'], array_column($parsed->attachments, 'name'));
+        self::assertSame("%PDF-1.4\0binary", Parser::attachments($message)[0]['bytes'] ?? null);
+        self::assertStringContainsString('multipart/mixed', $message);
     }
 
     public function testHtmlOnlyBecomesTextAndQuotedPrintableIsUndone(): void {

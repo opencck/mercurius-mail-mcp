@@ -79,7 +79,7 @@ final class ClientsTest extends AsyncTestCase {
         /** @var mixed $list */
         $list = self::dig($tools, 'result', 'tools');
         $names = array_column(is_array($list) ? $list : [], 'name');
-        self::assertSame(['mail_folders', 'mail_list', 'mail_read', 'mail_send'], $names);
+        self::assertSame(['mail_folders', 'mail_list', 'mail_read', 'mail_attachment', 'mail_send'], $names);
         self::assertNull($handler->handle([], ['jsonrpc' => '2.0', 'method' => 'notifications/initialized']));
 
         $missing = $handler->handle([], ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call', 'params' => ['name' => 'mail_folders', 'arguments' => []]]);
@@ -88,6 +88,17 @@ final class ClientsTest extends AsyncTestCase {
         $headers = ['x-mail-host' => 'mail.kwinta.net', 'x-mail-user' => 'admin@rekryt.ru', 'x-mail-password' => 'secret-pass'];
         $folders = $handler->handle($headers, ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/call', 'params' => ['name' => 'mail_folders', 'arguments' => []]]);
         self::assertSame("INBOX\nОтправленные", self::dig($folders, 'result', 'content', 0, 'text'));
+    }
+
+    public function testAnAttachmentComesAsAnEmbeddedResource(): void {
+        $content = McpHandler::attachmentContent(3, 'счёт.pdf', 'application/pdf', 'PDF');
+
+        self::assertSame('text', $content[0]['type'] ?? null);
+        $line = $content[0]['text'] ?? null;
+        self::assertIsString($line);
+        self::assertStringContainsString('счёт.pdf', $line);
+        self::assertSame('resource', $content[1]['type'] ?? null);
+        self::assertSame(['uri' => 'mail-attachment:///3/' . rawurlencode('счёт.pdf'), 'mimeType' => 'application/pdf', 'blob' => base64_encode('PDF')], $content[1]['resource'] ?? null);
     }
 
     public function testQuotingRefusesLineBreaks(): void {

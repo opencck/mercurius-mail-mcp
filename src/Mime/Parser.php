@@ -19,7 +19,8 @@ final class Parser {
         $plain = null;
         $html = null;
         $attachments = [];
-        self::walk($headers, $body, $plain, $html, $attachments, 0);
+        $files = [];
+        self::walk($headers, $body, $plain, $html, $attachments, $files, 0);
         $text = $plain ?? ($html === null ? '' : Html::toText($html));
         return new Message(self::decodeAll($headers), trim($text), $attachments);
     }
@@ -54,15 +55,31 @@ final class Parser {
     }
 
     /**
+     * The attachments of a message with their bytes, in the order mail_read numbers them.
+     *
+     * @return list<array{name: string, type: string, bytes: string}>
+     */
+    public static function attachments(string $raw): array {
+        [$headers, $body] = self::split($raw);
+        $plain = null;
+        $html = null;
+        $attachments = [];
+        $files = [];
+        self::walk($headers, $body, $plain, $html, $attachments, $files, 0);
+        return $files;
+    }
+
+    /**
      * @param array<string, array<int, string>> $headers
      * @param list<array{name: string, type: string, size: int}> $attachments
+     * @param list<array{name: string, type: string, bytes: string}> $files
      */
-    private static function walk(array $headers, string $body, ?string &$plain, ?string &$html, array &$attachments, int $depth): void {
+    private static function walk(array $headers, string $body, ?string &$plain, ?string &$html, array &$attachments, array &$files, int $depth): void {
         [$type, $params] = self::contentType($headers['content-type'][0] ?? 'text/plain');
         if (str_starts_with($type, 'multipart/') && isset($params['boundary']) && $depth < self::DEPTH) {
             foreach (self::parts($body, $params['boundary']) as $part) {
                 [$partHeaders, $partBody] = self::split($part);
-                self::walk($partHeaders, $partBody, $plain, $html, $attachments, $depth + 1);
+                self::walk($partHeaders, $partBody, $plain, $html, $attachments, $files, $depth + 1);
             }
             return;
         }
@@ -72,6 +89,7 @@ final class Parser {
         $name = $dispositionParams['filename'] ?? $params['name'] ?? '';
         if (str_starts_with($disposition, 'attachment') || ($name !== '' && !str_starts_with($type, 'text/'))) {
             $attachments[] = ['name' => self::decode($name === '' ? 'без имени' : $name), 'type' => $type, 'size' => strlen($decoded)];
+            $files[] = ['name' => self::decode($name === '' ? 'без имени' : $name), 'type' => $type, 'bytes' => $decoded];
             return;
         }
         $text = self::charset($decoded, $params['charset'] ?? 'utf-8');

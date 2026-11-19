@@ -9,9 +9,11 @@ Tools:
 
 - `mail_folders` — the folders of the mailbox.
 - `mail_list` — letters of a folder, newest first, with filters (unseen, from, subject, text, since).
-- `mail_read` — one letter: headers, text (HTML turned into text), attachments by name and size, and whether the
-  sender is authenticated.
-- `mail_send` — a plain-text letter, a reply keeps the thread. Marked destructive: a careful client asks a person.
+- `mail_read` — one letter: headers, text (HTML turned into text), numbered attachments by name and size, whether the
+  sender is authenticated and the authserv-id the check trusts.
+- `mail_attachment` — one attachment by uid and number, as an embedded resource (`blob`) the client keeps.
+- `mail_send` — a plain-text letter, a reply keeps the thread; `files` (name, mime type, base64), up to 10 and 25 MB
+  together, make it multipart/mixed. Marked destructive: a careful client asks a person.
 
 Reading opens folders read-only (`EXAMINE`) and fetches with `BODY.PEEK`, so mail is never marked as seen.
 

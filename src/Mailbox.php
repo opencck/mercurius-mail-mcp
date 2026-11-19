@@ -86,11 +86,26 @@ final class Mailbox {
     }
 
     /**
+     * One attachment of a message by its number (from 1, as mail_read lists them).
+     *
+     * @return array{name: string, type: string, bytes: string}
+     */
+    public function attachment(Account $account, string $folder, int $uid, int $index): array {
+        return $this->with($account, static function (ImapClient $imap) use ($folder, $uid, $index): array {
+            $imap->examine($folder);
+            $raw = $imap->message($uid) ?? throw new MailException(sprintf('Письма %d в «%s» нет.', $uid, $folder));
+            $files = Parser::attachments($raw);
+            return $files[$index - 1] ?? throw new MailException(sprintf('У письма %d вложений %d, номера %d нет.', $uid, count($files), $index));
+        });
+    }
+
+    /**
      * @param list<string> $to
      * @param list<string> $cc
+     * @param list<array{name: string, type: string, bytes: string}> $files
      * @return string the Message-ID
      */
-    public function send(Account $account, array $to, array $cc, string $subject, string $text, ?int $replyTo = null, string $folder = 'INBOX'): string {
+    public function send(Account $account, array $to, array $cc, string $subject, string $text, ?int $replyTo = null, string $folder = 'INBOX', array $files = []): string {
         $inReplyTo = '';
         $references = '';
         if ($replyTo !== null) {
@@ -104,7 +119,7 @@ final class Mailbox {
         if ($to === []) {
             throw new MailException('Нужен хотя бы один получатель.');
         }
-        [$message, $id] = Builder::build($account->from, $to, $cc, $subject, $text, $inReplyTo, $references);
+        [$message, $id] = Builder::build($account->from, $to, $cc, $subject, $text, $inReplyTo, $references, $files);
         $startTls = $account->smtpPort === 587 || $account->smtpPort === 25;
         (new SmtpClient(($this->connect)($account->host, $account->smtpPort, !$startTls)))->send($account, $account->from, [...$to, ...$cc], $message, $startTls);
         return $id;

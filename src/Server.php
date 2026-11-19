@@ -19,7 +19,8 @@ use Throwable;
  * The HTTP side: POST /mcp with a bearer token, JSON in and out (Streamable HTTP without a stream); GET /health.
  */
 final class Server {
-    private const BODY_MAX = 262_144;
+    /** a letter with files up to 25 MB, in base64 */
+    private const BODY_MAX = 36 * 1024 * 1024;
 
     public function __construct(
         private readonly McpHandler $handler,
