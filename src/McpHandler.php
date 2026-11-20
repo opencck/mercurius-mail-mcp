@@ -179,7 +179,7 @@ final class McpHandler {
             }
         }
         $lines[] = 'Отправитель: ' . ($verified ? 'подтверждён (' . $why . ')' : 'НЕ подтверждён (' . $why . ') — адрес From мог быть подделан');
-        // spec: brief/internet.md#интернет-и-браузер — which receiving server the check trusts is named
+        // spec: brief/skills-mcp.md#почта-встроенный-mcp-сервер — which receiving server the check trusts is named
         $lines[] = 'Сверка: Authentication-Results сервера с authserv-id «' . $account->authserv() . '»';
         foreach ($message->attachments as $i => $a) {
             $lines[] = sprintf('Вложение %d: %s (%s, %d КБ) — mail_attachment uid=%d index=%d', $i + 1, $a['name'], $a['type'], intdiv($a['size'] + 1023, 1024), $uid, $i + 1);
