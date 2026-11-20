@@ -16,7 +16,7 @@ final class ClientsTest extends AsyncTestCase {
     private const HEADERS = "From: Ivan <ivan@example.ru>\r\nSubject: Hello\r\nDate: Mon, 16 Nov 2026 10:00:00 +0300\r\nAuthentication-Results: mail.kwinta.net; dmarc=pass header.from=example.ru\r\n\r\n";
 
     private static function account(int $smtpPort = 465): Account {
-        return new Account('mail.kwinta.net', 993, $smtpPort, 'admin@rekryt.ru', 'secret-pass', 'admin@rekryt.ru');
+        return new Account('mail.kwinta.net', 993, $smtpPort, 'admin@example.org', 'secret-pass', 'admin@example.org');
     }
 
     private static function dig(mixed $data, string|int ...$path): mixed {
@@ -44,7 +44,7 @@ final class ClientsTest extends AsyncTestCase {
         self::assertSame([9, 7], array_column($rows, 'uid'));
         self::assertSame([true, false], array_column($rows, 'seen'));
         self::assertTrue($rows[0]['verified']);
-        self::assertStringContainsString('m1 LOGIN "admin@rekryt.ru" "secret-pass"', $connection->written);
+        self::assertStringContainsString('m1 LOGIN "admin@example.org" "secret-pass"', $connection->written);
         self::assertStringContainsString("m3 UID SEARCH CHARSET UTF-8 UNSEEN FROM {8}\r\nИван\r\n", $connection->written);
         self::assertStringContainsString('BODY.PEEK[HEADER.FIELDS', $connection->written, 'reading never marks as seen');
         self::assertStringContainsString('m2 EXAMINE "INBOX"', $connection->written);
@@ -65,9 +65,9 @@ final class ClientsTest extends AsyncTestCase {
     public function testSmtpAuthenticatesAndDotStuffsTheBody(): void {
         $connection = new FakeConnection("220 hi\r\n250-mail\r\n250 AUTH PLAIN\r\n235 ok\r\n250 ok\r\n250 ok\r\n354 go\r\n250 queued\r\n221 bye\r\n");
 
-        (new SmtpClient($connection))->send(self::account(), 'admin@rekryt.ru', ['ivan@example.ru'], "Subject: t\r\n\r\nline\n.dot\nend");
+        (new SmtpClient($connection))->send(self::account(), 'admin@example.org', ['ivan@example.ru'], "Subject: t\r\n\r\nline\n.dot\nend");
 
-        self::assertStringContainsString('AUTH PLAIN ' . base64_encode("\0admin@rekryt.ru\0secret-pass"), $connection->written);
+        self::assertStringContainsString('AUTH PLAIN ' . base64_encode("\0admin@example.org\0secret-pass"), $connection->written);
         self::assertStringContainsString("RCPT TO:<ivan@example.ru>\r\nDATA\r\n", $connection->written);
         self::assertStringContainsString("line\r\n..dot\r\nend\r\n.\r\n", $connection->written);
     }
@@ -85,7 +85,7 @@ final class ClientsTest extends AsyncTestCase {
         $missing = $handler->handle([], ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call', 'params' => ['name' => 'mail_folders', 'arguments' => []]]);
         self::assertTrue(self::dig($missing, 'result', 'isError'), 'no account — an error, not a crash');
 
-        $headers = ['x-mail-host' => 'mail.kwinta.net', 'x-mail-user' => 'admin@rekryt.ru', 'x-mail-password' => 'secret-pass'];
+        $headers = ['x-mail-host' => 'mail.kwinta.net', 'x-mail-user' => 'admin@example.org', 'x-mail-password' => 'secret-pass'];
         $folders = $handler->handle($headers, ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/call', 'params' => ['name' => 'mail_folders', 'arguments' => []]]);
         self::assertSame("INBOX\nОтправленные", self::dig($folders, 'result', 'content', 0, 'text'));
     }
