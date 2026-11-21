@@ -1,5 +1,7 @@
 [English](README.md) | [Русский](README.ru.md) | **中文**
 
+> 本文由模型翻译，尚未经人工审校；如有出入，以英文版为准。
+
 # mercurius-mail-mcp
 
 一个 [MCP](https://modelcontextprotocol.io) 服务器，内置基于 [AMPHP](https://amphp.org) 的异步 IMAP 和 SMTP 客户端。
