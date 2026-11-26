@@ -61,6 +61,19 @@ final class MimeTest extends TestCase {
         Builder::build('admin@example.org', ['ivan@example.ru'], [], "Тема\r\nBcc: all@example.ru", 'x');
     }
 
+    public function testASenderWithANameIsWrittenWithItAndSentFromItsAddress(): void {
+        self::assertSame(['Отдел продаж', 'admin@example.org'], Builder::sender('Отдел продаж <admin@example.org>'));
+        self::assertSame(['', 'admin@example.org'], Builder::sender('admin@example.org'));
+        self::assertSame(['Me', 'me@example.org'], Builder::sender('"Me" <me@example.org>'));
+
+        [$message, $id] = Builder::build('Отдел продаж <admin@example.org>', ['ivan@example.ru'], [], 's', 't');
+
+        self::assertSame('Отдел продаж <admin@example.org>', Parser::parse($message)->header('from'));
+        self::assertMatchesRegularExpression('~@example.org>$~', $id);
+        $this->expectException(MailException::class);
+        Builder::sender("Me <me@example.org>\r\nBcc: all@example.ru");
+    }
+
     public function testABadAddressIsRefused(): void {
         $this->expectException(MailException::class);
         Builder::build('admin@example.org', ['not an address'], [], 's', 't');

@@ -20,6 +20,7 @@ final class Builder {
      * @return array{string, string} the message and its Message-ID
      */
     public static function build(string $from, array $to, array $cc, string $subject, string $text, string $inReplyTo = '', string $references = '', array $files = []): array {
+        [$name, $from] = self::sender($from);
         foreach ([$from, ...$to, ...$cc] as $address) {
             if (filter_var($address, FILTER_VALIDATE_EMAIL) === false) {
                 throw new MailException('Неверный адрес: ' . $address);
@@ -33,7 +34,7 @@ final class Builder {
         $domain = substr((string) strrchr($from, '@'), 1);
         $id = sprintf('<%s@%s>', bin2hex(random_bytes(12)), $domain === '' ? 'mercurius' : $domain);
         $headers = [
-            'From: ' . $from,
+            'From: ' . ($name === '' ? $from : self::phrase($name) . ' <' . $from . '>'),
             'To: ' . implode(', ', $to),
         ];
         if ($cc !== []) {
@@ -67,5 +68,33 @@ final class Builder {
                 . "Content-Transfer-Encoding: base64\r\n\r\n" . rtrim(chunk_split(base64_encode($file['bytes']), 76, "\r\n"));
         }
         return [implode("\r\n", $headers) . "\r\n\r\n" . implode("\r\n", $parts) . "\r\n--$boundary--\r\n", $id];
+    }
+
+    /**
+     * The sender as the mailbox gives it — a bare address or «Name <address>» — split into the name and the address:
+     * the header carries both, the SMTP envelope only the address.
+     *
+     * @return array{string, string}
+     */
+    public static function sender(string $from): array {
+        if (preg_match('~[\r\n]~', $from) === 1) {
+            throw new MailException('Перевод строки в заголовке письма недопустим.');
+        }
+        if (preg_match('~^\s*(.*?)\s*<([^<>\s]+)>\s*$~u', $from, $m) !== 1) {
+            return ['', trim($from)];
+        }
+        $name = $m[1];
+        if (strlen($name) >= 2 && $name[0] === '"' && $name[strlen($name) - 1] === '"') {
+            $name = stripcslashes(substr($name, 1, -1));
+        }
+        return [$name, $m[2]];
+    }
+
+    /** A display name for the header: encoded when it is not plain ASCII, quoted otherwise. */
+    private static function phrase(string $name): string {
+        if (preg_match('~[^\x20-\x7e]~', $name) === 1) {
+            return mb_encode_mimeheader($name, 'UTF-8', 'B', "\r\n");
+        }
+        return '"' . addcslashes($name, '"\\') . '"';
     }
 }

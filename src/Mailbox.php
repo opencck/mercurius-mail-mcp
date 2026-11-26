@@ -121,7 +121,7 @@ final class Mailbox {
         }
         [$message, $id] = Builder::build($account->from, $to, $cc, $subject, $text, $inReplyTo, $references, $files);
         $startTls = $account->smtpPort === 587 || $account->smtpPort === 25;
-        (new SmtpClient(($this->connect)($account->host, $account->smtpPort, !$startTls)))->send($account, $account->from, [...$to, ...$cc], $message, $startTls);
+        (new SmtpClient(($this->connect)($account->host, $account->smtpPort, !$startTls)))->send($account, Builder::sender($account->from)[1], [...$to, ...$cc], $message, $startTls);
         return $id;
     }
 
