@@ -1,15 +1,21 @@
 {
     "name": "opencck/mercurius-mail-mcp",
-    "description": "An MCP server with a built-in async IMAP and SMTP client for AMPHP: list, read and send mail, sender authentication by Authentication-Results",
+    "description": "An MCP server over stdio with its own async IMAP and SMTP client for AMPHP: one mailbox per process; list, read and send mail, sender authentication by Authentication-Results",
     "type": "library",
     "license": "MIT",
-    "keywords": ["amphp", "mcp", "imap", "smtp", "mail", "agent"],
+    "keywords": [
+        "amphp",
+        "mcp",
+        "imap",
+        "smtp",
+        "mail",
+        "agent"
+    ],
     "require": {
         "php": ">=8.2",
         "ext-mbstring": "*",
         "amphp/amp": "^3",
         "amphp/byte-stream": "^2",
-        "amphp/http-server": "^3",
         "amphp/socket": "^2",
         "psr/log": "^3"
     },
@@ -30,7 +36,9 @@
             "Mercurius\\MailMcp\\Test\\": "test/"
         }
     },
-    "bin": ["bin/mail-mcp"],
+    "bin": [
+        "bin/mail-mcp-stdio"
+    ],
     "config": {
         "sort-packages": true,
         "platform": {

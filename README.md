@@ -21,25 +21,21 @@ Reading opens folders read-only (`EXAMINE`) and fetches with `BODY.PEEK`, so mai
 `Authentication-Results` header of the receiving server, pinned to its authserv-id: DMARC pass, or SPF or DKIM pass
 aligned with the `From` domain (after the email adapter of [hermes-agent](https://github.com/NousResearch/hermes-agent)).
 
-**Credentials are not kept by the server.** Each request carries the mailbox in headers: `X-Mail-Host`,
-`X-Mail-User`, `X-Mail-Password`, optional `X-Mail-Imap-Port` (993), `X-Mail-Smtp-Port` (465; 587 and 25 use STARTTLS),
-`X-Mail-From`, `X-Mail-Authserv-Id`. The endpoint needs `Authorization: Bearer <MAIL_MCP_TOKEN>`.
+**One mailbox per process, over stdio.** The mailbox comes from the arguments, the password from the environment, so
+other processes do not see it in the list of processes:
 
 ```sh
-MAIL_MCP_TOKEN=$(openssl rand -hex 32) MAIL_MCP_PORT=8090 vendor/bin/mail-mcp
+MAIL_PASSWORD=… php bin/mail-mcp-stdio --host=mail.example.com --user=me@example.com \
+    [--imap-port=993] [--smtp-port=465] [--from='Me <me@example.com>'] [--authserv-id=mx.example.com]
 ```
 
-`POST /mcp` takes JSON-RPC (`initialize`, `tools/list`, `tools/call`, `ping`) and answers with JSON; `GET /health`.
+SMTP on 587 and 25 uses STARTTLS. Each line of stdin is a JSON-RPC request (`initialize`, `tools/list`, `tools/call`,
+`ping`), each answer one line of stdout. Without a host the server starts and lists its tools, and every call says what
+is missing: an install tries it so.
 
-## Docker
-
-```sh
-docker build -t mercurius-mail-mcp .
-docker run --rm -e MAIL_MCP_TOKEN=$(openssl rand -hex 32) -p 8090:8090 mercurius-mail-mcp
-```
-
-In Mercurius the server is in the compose profile `mail` (submodule `mcp/mail`): add it to `COMPOSE_PROFILES` and set
-`MAIL_MCP_TOKEN` in `.env`.
+In Mercurius each mailbox is an entry of `.mcp.json`; `mercurius.mcp.json` holds the install plan (`composer install
+--no-dev`, then `php ${INSTALL_DIR}/bin/mail-mcp-stdio`). The agent's core checks that the host of the mailbox does not
+lead into an internal network and asks the keeper of the mailbox before a letter goes.
 
 ## Checks
 

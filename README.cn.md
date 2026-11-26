@@ -19,25 +19,18 @@
 
 **发件人认证。** `From` 由发件人自己填写。邮件仅在接收服务器的第一个 `Authentication-Results` 头、并固定到其 authserv-id 时才算已认证：DMARC 通过，或与 `From` 域名对齐的 SPF 或 DKIM 通过（参照 [hermes-agent](https://github.com/NousResearch/hermes-agent) 的邮件适配器）。
 
-**服务器不保存凭据。** 每个请求通过请求头携带邮箱信息：`X-Mail-Host`、
-`X-Mail-User`、`X-Mail-Password`，可选的 `X-Mail-Imap-Port`（993）、`X-Mail-Smtp-Port`（465；587 和 25 使用 STARTTLS）、
-`X-Mail-From`、`X-Mail-Authserv-Id`。该端点需要 `Authorization: Bearer <MAIL_MCP_TOKEN>`。
+**每个进程一个邮箱，通过 stdio 运行。** 邮箱来自参数，密码来自环境变量，这样其他进程在进程列表中看不到它：
 
 ```sh
-MAIL_MCP_TOKEN=$(openssl rand -hex 32) MAIL_MCP_PORT=8090 vendor/bin/mail-mcp
+MAIL_PASSWORD=… php bin/mail-mcp-stdio --host=mail.example.com --user=me@example.com \
+    [--imap-port=993] [--smtp-port=465] [--from='Me <me@example.com>'] [--authserv-id=mx.example.com]
 ```
 
-`POST /mcp` 接收 JSON-RPC（`initialize`、`tools/list`、`tools/call`、`ping`）并以 JSON 应答；`GET /health`。
+SMTP 在 587 和 25 端口使用 STARTTLS。stdin 的每一行是一个 JSON-RPC 请求（`initialize`、`tools/list`、`tools/call`、
+`ping`），每个回答是 stdout 的一行。没有主机时服务器照常启动并列出工具，每次调用会说明缺少什么：安装时就是这样试运行的。
 
-## Docker
-
-```sh
-docker build -t mercurius-mail-mcp .
-docker run --rm -e MAIL_MCP_TOKEN=$(openssl rand -hex 32) -p 8090:8090 mercurius-mail-mcp
-```
-
-在 Mercurius 中，该服务器位于 compose 配置档 `mail`（子模块 `mcp/mail`）：将其加入 `COMPOSE_PROFILES`，并在 `.env` 中设置
-`MAIL_MCP_TOKEN`。
+在 Mercurius 中，每个邮箱是 `.mcp.json` 中的一个条目；`mercurius.mcp.json` 中是安装计划（`composer install --no-dev`，
+然后 `php ${INSTALL_DIR}/bin/mail-mcp-stdio`）。智能体内核会检查邮箱主机不指向内部网络，并在发信前询问邮箱的所有者。
 
 ## 检查
 

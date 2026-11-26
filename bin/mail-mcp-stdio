@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * The mail MCP server over stdio, one mailbox per process: php bin/mail-mcp-stdio --host=… --user=… [--imap-port=993]
+ * [--smtp-port=465] [--from=…] [--authserv-id=…], the password in MAIL_PASSWORD.
+ */
+
+use Mercurius\MailMcp\Mailbox;
+use Mercurius\MailMcp\McpHandler;
+use Mercurius\MailMcp\Stdio;
+
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $autoload) {
+    if (is_file($autoload)) {
+        require $autoload;
+        break;
+    }
+}
+
+/** @var array<string, string> $env */
+$env = getenv();
+(new Stdio(new McpHandler(new Mailbox()), Stdio::headers(array_values(array_filter($argv, 'is_string')), $env)))->serve(Amp\ByteStream\getStdin(), Amp\ByteStream\getStdout());

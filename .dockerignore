@@ -1,5 +1,0 @@
-vendor/
-.git/
-.phpunit.cache/
-var/
-test/

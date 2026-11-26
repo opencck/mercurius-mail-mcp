@@ -23,25 +23,21 @@
 pass, выровненные с доменом `From` (по образцу почтового адаптера
 [hermes-agent](https://github.com/NousResearch/hermes-agent)).
 
-**Сервер не хранит учётные данные.** Каждый запрос несёт ящик в заголовках: `X-Mail-Host`, `X-Mail-User`,
-`X-Mail-Password`, по желанию `X-Mail-Imap-Port` (993), `X-Mail-Smtp-Port` (465; 587 и 25 — через STARTTLS),
-`X-Mail-From`, `X-Mail-Authserv-Id`. Вход — `Authorization: Bearer <MAIL_MCP_TOKEN>`.
+**Один ящик на процесс, по stdio.** Ящик — из аргументов, пароль — из окружения, чтобы другие процессы не видели его
+в списке процессов:
 
 ```sh
-MAIL_MCP_TOKEN=$(openssl rand -hex 32) MAIL_MCP_PORT=8090 vendor/bin/mail-mcp
+MAIL_PASSWORD=… php bin/mail-mcp-stdio --host=mail.example.com --user=me@example.com \
+    [--imap-port=993] [--smtp-port=465] [--from='Me <me@example.com>'] [--authserv-id=mx.example.com]
 ```
 
-`POST /mcp` принимает JSON-RPC (`initialize`, `tools/list`, `tools/call`, `ping`) и отвечает JSON; `GET /health`.
+SMTP на 587 и 25 — через STARTTLS. Каждая строка stdin — запрос JSON-RPC (`initialize`, `tools/list`, `tools/call`,
+`ping`), каждый ответ — строка stdout. Без хоста сервер запускается и отдаёт список инструментов, а каждый вызов
+говорит, чего не хватает: так его пробует установка.
 
-## Docker
-
-```sh
-docker build -t mercurius-mail-mcp .
-docker run --rm -e MAIL_MCP_TOKEN=$(openssl rand -hex 32) -p 8090:8090 mercurius-mail-mcp
-```
-
-В Меркурии сервер — в профиле compose `mail` (сабмодуль `mcp/mail`): добавьте его в `COMPOSE_PROFILES` и задайте
-`MAIL_MCP_TOKEN` в `.env`.
+В Меркурии каждый ящик — запись `.mcp.json`; в `mercurius.mcp.json` — план установки (`composer install --no-dev`,
+затем `php ${INSTALL_DIR}/bin/mail-mcp-stdio`). Ядро агента проверяет, что хост ящика не ведёт во внутреннюю сеть, и
+спрашивает хозяина ящика перед отправкой письма.
 
 ## Проверки
 
